@@ -49,6 +49,8 @@ public class RangeBar extends View {
     private static final float DEFAULT_CONNECTING_LINE_WEIGHT_PX = 4;
     private static final int DEFAULT_THUMB_IMAGE_NORMAL = R.drawable.seek_thumb_normal;
     private static final int DEFAULT_THUMB_IMAGE_PRESSED = R.drawable.seek_thumb_pressed;
+    private static final int DEFAULT_MIN_VALUE = 1;
+    private static final int DEFAULT_MAX_VALUE = 100;
 
     // Corresponds to android.R.color.holo_blue_light.
     private static final int DEFAULT_CONNECTING_LINE_COLOR = 0xff33b5e5;
@@ -87,6 +89,8 @@ public class RangeBar extends View {
     private RangeBar.OnRangeBarChangeListener mListener;
     private int mLeftIndex = 0;
     private int mRightIndex = mTickCount - 1;
+    private int mMinValue = DEFAULT_MIN_VALUE;
+    private int mMaxValue = DEFAULT_MAX_VALUE;
 
     // Constructors ////////////////////////////////////////////////////////////
 
@@ -129,6 +133,9 @@ public class RangeBar extends View {
 
         bundle.putInt("LEFT_INDEX", mLeftIndex);
         bundle.putInt("RIGHT_INDEX", mRightIndex);
+        
+        bundle.putInt("MIN_VALUE", mMinValue);
+        bundle.putInt("MAX_VALUE", mMaxValue);
 
         bundle.putBoolean("FIRST_SET_TICK_COUNT", mFirstSetTickCount);
 
@@ -158,6 +165,10 @@ public class RangeBar extends View {
 
             mLeftIndex = bundle.getInt("LEFT_INDEX");
             mRightIndex = bundle.getInt("RIGHT_INDEX");
+            
+            mMinValue = bundle.getInt("MIN_VALUE");
+            mMaxValue = bundle.getInt("MAX_VALUE");
+            
             mFirstSetTickCount = bundle.getBoolean("FIRST_SET_TICK_COUNT");
 
             setThumbIndices(mLeftIndex, mRightIndex);
@@ -249,12 +260,18 @@ public class RangeBar extends View {
             mRightIndex = newRightIndex;
 
             if (mListener != null) {
-                mListener.onIndexChangeListener(this, mLeftIndex, mRightIndex);
+                onIndexChange(mLeftIndex, mRightIndex);
             }
         }
 
         // Create the line connecting the two thumbs.
         mConnectingLine = new ConnectingLine(ctx, yPos, mConnectingLineWeight, mConnectingLineColor);
+    }
+
+    private void onIndexChange(int leftIndex, int rightIndex) {
+        final int maxValueFromZero  = mMaxValue - mMinValue;
+        final double multiplier     = (double) maxValueFromZero / ((double) mTickCount - 1.0);
+        mListener.onIndexChangeListener(this, leftIndex, rightIndex, (int)(multiplier * leftIndex) + mMinValue, (int)(multiplier * rightIndex) + mMinValue);
     }
 
     @Override
@@ -331,7 +348,7 @@ public class RangeBar extends View {
                 mRightIndex = mTickCount - 1;
 
                 if (mListener != null) {
-                    mListener.onIndexChangeListener(this, mLeftIndex, mRightIndex);
+                    onIndexChange(mLeftIndex, mRightIndex);
                 }
             }
             if (indexOutOfRange(mLeftIndex, mRightIndex))
@@ -340,7 +357,7 @@ public class RangeBar extends View {
                 mRightIndex = mTickCount - 1;
 
                 if (mListener != null)
-                    mListener.onIndexChangeListener(this, mLeftIndex, mRightIndex);
+                    onIndexChange(mLeftIndex, mRightIndex);
             }
 
             createBar();
@@ -495,7 +512,7 @@ public class RangeBar extends View {
             createThumbs();
 
             if (mListener != null) {
-                mListener.onIndexChangeListener(this, mLeftIndex, mRightIndex);
+                onIndexChange(mLeftIndex, mRightIndex);
             }
         }
 
@@ -551,7 +568,7 @@ public class RangeBar extends View {
                 mRightIndex = mTickCount - 1;
 
                 if (mListener != null) {
-                    mListener.onIndexChangeListener(this, mLeftIndex, mRightIndex);
+                    onIndexChange(mLeftIndex, mRightIndex);
                 }
 
             } else {
@@ -559,6 +576,9 @@ public class RangeBar extends View {
                 Log.e(TAG, "tickCount less than 2; invalid tickCount. XML input ignored.");
             }
 
+            mMinValue = ta.getInt(R.styleable.RangeBar_minValue, DEFAULT_MIN_VALUE);
+            mMaxValue = ta.getInt(R.styleable.RangeBar_maxValue, DEFAULT_MAX_VALUE);
+            
             mTickHeightDP = ta.getDimension(R.styleable.RangeBar_tickHeight, DEFAULT_TICK_HEIGHT_DP);
             mBarWeight = ta.getDimension(R.styleable.RangeBar_barWeight, DEFAULT_BAR_WEIGHT_PX);
             mBarColor = ta.getColor(R.styleable.RangeBar_barColor, DEFAULT_BAR_COLOR);
@@ -768,7 +788,7 @@ public class RangeBar extends View {
             mRightIndex = newRightIndex;
 
             if (mListener != null) {
-                mListener.onIndexChangeListener(this, mLeftIndex, mRightIndex);
+                onIndexChange(mLeftIndex, mRightIndex);
             }
         }
     }
@@ -827,6 +847,6 @@ public class RangeBar extends View {
      */
     public static interface OnRangeBarChangeListener {
 
-        public void onIndexChangeListener(RangeBar rangeBar, int leftThumbIndex, int rightThumbIndex);
+        public void onIndexChangeListener(RangeBar rangeBar, int leftThumbIndex, int rightThumbIndex, int leftValue, int rightValue);
     }
 }
